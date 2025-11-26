@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  clerkId           String   @unique
+  email             String   @unique
+  name              String?
+  avatar            String?
+  bio               String?
+  collegeName       String?
+  rollNumber        String?  @unique
+  fatherName        String?
+  admissionNumber   String?
+  enrollmentNumber  String?
+  course            String?
+  validYear         String?
+  collegeIdCard     String?  // URL to the ID card image
+  verificationStatus String  @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, REJECTED
+  verificationScore  Float?  @default(0)
+  verificationData   Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  phoneNumber       String?  @unique
+  isPhoneVerified   Boolean  @default(false)
+  listings          Listing[]
+}
+
+
+
+model Listing {
+  id                 String    @id @default(cuid())
+  title              String
+  description        String
+  price              Float
+  category           String
+  image              String
+  postedBy           String
+  userId      String   // Clerk User ID
+  user        User     @relation(fields: [userId], references: [clerkId])
+  status      String   @default("ACTIVE") // ACTIVE, SOLD
+  promotedUntil DateTime?
+  conversations Conversation[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RoommateProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique // Clerk User ID
+  name        String
+  age         Int
+  gender      String
+  budget      Float
+  bio         String
+  preferences String?  // e.g., "Non-smoker, Early riser"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "Seller Boost", "Buyer Premium"
+  price       Float
+  durationDays Int
+  features    String[] // List of features
+  type        String   // "SELLER" or "BUYER"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserSubscription {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk User ID
+  planId      String
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  status      String   @default("ACTIVE") // ACTIVE, EXPIRED
+  boostsRemaining Int  @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  user1Id   String // Clerk ID
+  user2Id   String // Clerk ID
+  listingId String?
+  listing   Listing?  @relation(fields: [listingId], references: [id])
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([user1Id, user2Id, listingId]) // Unique conversation per pair AND listing (optional, or just keep per pair)
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String // Clerk ID
+  content        String
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+}
