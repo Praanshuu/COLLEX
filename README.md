@@ -1,134 +1,134 @@
-# Collex Marketplace
+# Collex - College Marketplace 🎓
 
-A campus-focused marketplace prototype built with the Next.js App Router. The goal is to provide college students with a centralized place to buy, sell, and connect around listings such as textbooks, electronics, furniture, and housing opportunities.
+Collex is a specialized marketplace and connection platform designed exclusively for college students. It provides a secure, trusted environment for buying and selling campus essentials, finding roommates, and connecting with peers.
 
-## Project Status
+![Collex Banner](https://via.placeholder.com/1200x400?text=Collex+Marketplace)
 
-| Area      | Status | Notes |
-|-----------|--------|-------|
-| Frontend  | ✅ In progress | Core pages implemented with client-side validation, mock listings, and responsive UI built with Tailwind CSS and Radix UI components. |
-| Authentication | ✅ Integrated | Clerk authentication configured with modal sign-in/sign-up flows and user management. |
-| Backend   | ⚠️ Not started | No database or server-side logic yet. All interactions are simulated on the client. |
-| APIs      | ⚠️ Not started | No API routes have been created. Integration with listing persistence and image storage is pending. |
+## 🚀 Project Status
 
-## Implemented Frontend Features
+| Area | Status | Notes |
+|------|--------|-------|
+| **Frontend** | ✅ Completed | Modern, responsive UI with Tailwind CSS, Framer Motion, and Shadcn UI. |
+| **Backend** | ✅ Completed | Server Actions, Prisma ORM, and Neon (PostgreSQL) database fully integrated. |
+| **Auth** | ✅ Completed | Clerk authentication with custom Roll Number & ID Card verification (OCR). |
+| **Features** | ✅ Completed | Marketplace, Roommate Finder (Tinder-style), Real-time Chat, Notifications. |
 
-- **Landing page (`/`)** with hero CTA and category shortcuts.
-- **Browse listings (`/browse`)** page featuring search, category filtering, and sorting over mock data.
-- **Add listing (`/add-listing`)** form with client-side validation, file upload preview, and listing tips.
-- **Authentication (Clerk)**
-  - Modal-based sign-in and sign-up flows
-  - User profile management with UserButton component
-  - Protected routes via middleware
-  - Session management handled by Clerk
-- **My listings (`/my-listings`)** and **profile (`/profile`)** placeholder pages ready for real data wiring.
-- **Shared UI components** under `components/ui`, powered by Radix UI and shadcn-styled primitives.
+## ✨ Key Features
 
-## Outstanding Work
+### 🛒 Marketplace
+- **Buy & Sell**: Post listings for textbooks, electronics, furniture, and more.
+- **Smart Search**: Filter by category, price, and keywords.
+- **Verification**: Only verified students can post, ensuring safety.
+- **Monetization**: Subscription tiers (Free, Pro, Business) for sellers to boost listings.
 
-1. Stand up a backend (Next.js Route Handlers or external service) for listings management.
-2. Replace mock data with persistent storage (e.g., Postgres, MongoDB, or Supabase).
-3. Connect Clerk user data to listings (author attribution, my listings filtering).
-4. Implement image storage (e.g., Vercel Blob, Cloudinary, or S3) for listing photos.
-5. Add data validation and form submission via API endpoints.
-6. Set up testing (unit/integration) for critical flows.
-7. Harden accessibility and performance audits.
-8. Remove legacy `/login` and `/signup` pages (now handled by Clerk modals).
+### 🤝 Roommate Finder
+- **Swipe Interface**: Tinder-style "Swipe Right" to match with potential roommates.
+- **Intelligent Matching**: Matches based on preferences (Sleep schedule, cleanliness, etc.).
+- **Auto-Connect**: Mutual matches automatically create a chat conversation.
 
-## Tech Stack
+### 💬 Real-time Chat
+- **Rich Messaging**: Send text, emojis, images, and documents.
+- **Attachments**: Secure local file upload system for sharing files.
+- **Notifications**: Instant alerts for new messages and matches.
+- **Mobile Optimized**: Responsive chat interface with auto-scroll and read receipts.
 
-- **Framework:** Next.js 15 (App Router, TypeScript)
-- **Authentication:** Clerk (modal flows, user management, middleware protection)
-- **UI & Styling:** Tailwind CSS 4, Radix UI, shadcn-derived components
-- **State & Forms:** React 19, React Hook Form, Zod
-- **Utilities:** clsx, class-variance-authority, date-fns, embla-carousel
-- **Icons:** lucide-react
+### 🔐 Security & Verification
+- **Clerk Authentication**: Secure login via Email/Google.
+- **Identity Verification**:
+    - **OCR Technology**: Uses Tesseract.js to scan College ID cards.
+    - **Roll Number Check**: Ensures one account per student.
+    - **Phone Verification**: OTP-based verification for trusted contacts.
 
-## Project Structure
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/), [Shadcn UI](https://ui.shadcn.com/), [Framer Motion](https://www.framer.com/motion/)
+- **Database**: [PostgreSQL](https://www.postgresql.org/) (via [Neon](https://neon.tech/))
+- **ORM**: [Prisma](https://www.prisma.io/)
+- **Authentication**: [Clerk](https://clerk.com/)
+- **OCR**: [Tesseract.js](https://tesseract.projectnaptha.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Utilities**: `date-fns`, `zod`, `react-hook-form`, `sonner`
+
+## 📂 Project Structure
 
 ```
 collex-marketplace/
-├─ app/                 # App Router pages and layouts
-│  ├─ add-listing/
-│  ├─ browse/
-│  ├─ login/
-│  ├─ my-listings/
-│  ├─ profile/
-│  └─ signup/
-├─ components/
-│  ├─ ui/              # Reusable UI primitives
-│  ├─ listing-card.tsx
-│  └─ navigation.tsx
-├─ hooks/              # Custom React hooks (placeholder)
-├─ lib/                # Shared utilities
-├─ public/             # Static assets
-├─ styles/             # Global Tailwind entrypoint
-├─ package.json
-└─ pnpm-lock.yaml
+├── app/                    # Next.js App Router
+│   ├── actions.ts          # Server Actions (Backend Logic)
+│   ├── api/                # API Routes (Webhooks, Seed)
+│   ├── (auth)/             # Authentication Pages
+│   ├── browse/             # Marketplace Browse Page
+│   ├── messages/           # Chat System
+│   ├── roommate-finder/    # Swipe Interface
+│   └── ...
+├── components/             # React Components
+│   ├── auth/               # Auth Guards & Verification
+│   ├── chat/               # Chat UI Components
+│   ├── ui/                 # Shadcn UI Primitives
+│   └── ...
+├── prisma/                 # Database Schema
+│   └── schema.prisma
+├── public/                 # Static Assets & Uploads
+└── ...
 ```
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-
-- Node.js 18.18+ (recommend 20 LTS)
-- pnpm (`npm install -g pnpm`)
+- Node.js 18+
+- PostgreSQL Database (Neon recommended)
+- Clerk Account
 
 ### Installation
 
-```bash
-pnpm install
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/yourusername/collex-marketplace.git
+    cd collex-marketplace
+    ```
 
-> **Note:** pnpm warns that `vaul@0.9.9` expects React 16–18. The app currently uses React 19, and the UI works, but upgrade `vaul` or pin React 18 before production usage.
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    # or
+    pnpm install
+    ```
 
-### Environment Setup
+3.  **Environment Setup:**
+    Create a `.env` file in the root directory and add:
+    ```env
+    # Database
+    DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
 
-1. Create a `.env.local` file in the project root
-2. Get your Clerk API keys from the [Clerk Dashboard](https://dashboard.clerk.com/last-active?path=api-keys)
-3. Add the following environment variables:
+    # Clerk Auth
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+    CLERK_SECRET_KEY=sk_test_...
+    ```
 
-```bash
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
-CLERK_SECRET_KEY=sk_test_your_secret_here
-```
+4.  **Database Setup:**
+    ```bash
+    npx prisma generate
+    npx prisma db push
+    ```
 
-> **Security:** Never commit `.env.local` to version control. The `.gitignore` file excludes all `.env*` files by default.
+5.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
 
-### Local Development
+    Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-```bash
-pnpm dev
-```
+## 🧪 Testing
 
-- App runs at `http://localhost:3000`
-- Mock data and client-side alerts simulate backend responses
+- **Manual Testing**: The app is fully functional for manual testing.
+- **Seed Data**: Use the `/api/seed` route (if enabled) to populate mock data for testing.
 
-### Additional Scripts
+## 🤝 Contributing
 
-| Script        | Description |
-|---------------|-------------|
-| `pnpm build`  | Create a production build |
-| `pnpm start`  | Serve the production build |
-| `pnpm lint`   | Run Next.js lint rules |
+Contributions are welcome! Please fork the repository and submit a Pull Request.
 
-## Testing
+## 📄 License
 
-Testing has not been configured. Recommended next steps include:
-
-1. Set up Jest/Testing Library for component coverage.
-2. Add Playwright or Cypress for end-to-end flows once APIs exist.
-
-## Deployment Checklist
-
-- Resolve peer dependency warning between React 19 and `vaul`.
-- Add Clerk environment variables to production environment.
-- Configure Clerk production instance and update API keys.
-- Wire API routes for CRUD operations.
-- Implement database and connect to Clerk user IDs.
-- Configure additional environment variables (database, storage).
-- Add monitoring/logging (e.g., Vercel Analytics, Sentry).
-
-## License
-
-This project is currently unlicensed. Add a license file before public release if required.
+This project is licensed under the MIT License.
