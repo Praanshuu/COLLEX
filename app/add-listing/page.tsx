@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useUser } from "@clerk/nextjs"
 import { createListing } from "@/app/actions"
+import { toast } from "sonner"
 
 const categories = ["Books & Notes", "Electronics", "Furniture", "PGs & Flatmates", "Vehicles & More"]
 
@@ -83,9 +84,19 @@ export default function AddListingPage() {
       const result = await createListing(null, data)
 
       if (result.error) {
-        setError(result.message)
+        if (result.code === "UNVERIFIED") {
+          toast.error(result.message, {
+            action: {
+              label: "Verify Now",
+              onClick: () => router.push("/profile")
+            }
+          })
+          setError(result.message) // Also show in alert
+        } else {
+          setError(result.message)
+        }
       } else {
-        alert("Listing created successfully!")
+        toast.success("Listing created successfully!")
         router.push("/browse")
       }
     } catch (err) {

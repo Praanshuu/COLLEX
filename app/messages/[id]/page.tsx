@@ -17,6 +17,8 @@ interface Message {
     senderId: string
     content: string
     createdAt: Date
+    attachmentUrl?: string | null
+    attachmentType?: string | null
 }
 
 interface OtherUser {
@@ -104,10 +106,10 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
             />
 
             <ChatInput
-                onSend={async (content) => {
+                onSend={async (content, attachmentUrl, attachmentType) => {
                     setSending(true)
                     try {
-                        await sendMessage(id, content)
+                        await sendMessage(id, content, attachmentUrl, attachmentType)
                         await fetchMessages()
                     } catch (error) {
                         console.error("Failed to send message", error)

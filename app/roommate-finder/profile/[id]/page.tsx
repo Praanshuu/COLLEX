@@ -74,7 +74,7 @@ export default function RoommateProfilePage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-screen bg-background">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
         )
@@ -83,101 +83,128 @@ export default function RoommateProfilePage() {
     if (!profile) return null
 
     return (
-        <div className="min-h-screen bg-background py-8">
-            <div className="max-w-2xl mx-auto px-4">
-                <Button variant="ghost" className="mb-4 gap-2" onClick={() => router.back()}>
+        <div className="min-h-screen bg-background relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
+            {/* Subtle Background - On Brand */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] opacity-50" />
+                <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
+            </div>
+
+            <div className="relative z-10 w-full max-w-5xl">
+                <Button
+                    variant="ghost"
+                    className="absolute top-0 left-0 -mt-12 md:-ml-12 md:mt-0 gap-2 hover:bg-secondary transition-colors z-20 font-medium"
+                    onClick={() => router.back()}
+                >
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Finder
+                    Back
                 </Button>
 
-                <Card className="overflow-hidden border-2 shadow-xl">
-                    {/* Image Section */}
-                    <div className="h-[400px] relative bg-muted">
-                        {profile.images.length > 0 ? (
-                            <img
-                                src={profile.images[0]}
-                                alt={profile.name}
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-secondary text-secondary-foreground">
-                                <span className="text-4xl">📷</span>
-                            </div>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-20 text-white">
-                            <h1 className="text-4xl font-bold">{profile.name}, {profile.age}</h1>
-                            <p className="text-xl opacity-90">{profile.gender}</p>
-                        </div>
-                    </div>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                    <Card className="overflow-hidden border border-border/50 shadow-2xl bg-card/50 backdrop-blur-xl rounded-[2rem]">
+                        <div className="flex flex-col md:flex-row h-auto md:h-[600px]">
+                            {/* Image Section (40%) */}
+                            <div className="relative w-full md:w-[45%] h-[400px] md:h-full group overflow-hidden bg-muted">
+                                <img
+                                    src={profile.images[0] || "/placeholder-user.jpg"}
+                                    alt={profile.name}
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 grayscale-[10%] group-hover:grayscale-0"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
-                    {/* Details Section */}
-                    <CardContent className="p-6 space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-muted-foreground text-lg">
-                                <Briefcase className="h-5 w-5" />
-                                <span>{profile.occupation || "Student"}</span>
-                            </div>
-                            <div className="font-bold text-primary text-2xl">
-                                ₹{profile.budget.toLocaleString()}/mo
-                            </div>
-                        </div>
-
-                        {profile.location && (
-                            <div className="flex items-center gap-2 text-muted-foreground text-lg">
-                                <MapPin className="h-5 w-5" />
-                                <span>{profile.location}</span>
-                            </div>
-                        )}
-
-                        <div className="bg-muted/30 p-4 rounded-lg">
-                            <h3 className="font-semibold mb-2">About Me</h3>
-                            <p className="text-lg leading-relaxed">
-                                {profile.bio.replace(/(\d{10})|(\S+@\S+\.\S+)/g, "********")}
-                            </p>
-                        </div>
-
-                        <div>
-                            <h3 className="font-semibold mb-3">Interests & Tags</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {profile.tags.map(tag => (
-                                    <Badge key={tag} variant="secondary" className="text-sm px-3 py-1 rounded-full">
-                                        {tag}
+                                {/* Overlay Info */}
+                                <div className="absolute top-6 right-6">
+                                    <Badge variant="secondary" className="backdrop-blur-md bg-white/90 text-black border-0 px-4 py-1.5 text-sm font-semibold shadow-sm">
+                                        ₹{profile.budget.toLocaleString()}/mo
                                     </Badge>
-                                ))}
+                                </div>
+
+                                <div className="absolute bottom-0 left-0 p-8 text-white w-full">
+                                    <h1 className="text-4xl font-bold leading-tight mb-2 tracking-tight">{profile.name}, {profile.age}</h1>
+                                    <div className="flex items-center gap-3 text-white/90 text-base font-medium">
+                                        <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
+                                            <Briefcase className="h-4 w-4" />
+                                            <span>{profile.occupation || "Student"}</span>
+                                        </div>
+                                        {profile.location && (
+                                            <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
+                                                <MapPin className="h-4 w-4" />
+                                                <span>{profile.location}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Content Section (60%) */}
+                            <div className="w-full md:w-[55%] p-8 md:p-10 flex flex-col h-full bg-card">
+                                <div className="flex-grow space-y-8 overflow-y-auto pr-2 custom-scrollbar">
+                                    {/* Bio */}
+                                    <div>
+                                        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            About Me
+                                        </h3>
+                                        <p className="text-muted-foreground leading-relaxed text-lg font-normal">
+                                            {profile.bio}
+                                        </p>
+                                    </div>
+
+                                    {/* Tags */}
+                                    <div>
+                                        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            Interests
+                                        </h3>
+                                        <div className="flex flex-wrap gap-2.5">
+                                            {profile.tags.map(tag => (
+                                                <Badge
+                                                    key={tag}
+                                                    variant="outline"
+                                                    className="px-4 py-2 rounded-full text-sm font-medium border-border hover:bg-secondary transition-colors"
+                                                >
+                                                    {tag}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons - Sticky Bottom */}
+                                <div className="pt-8 mt-6 border-t border-border flex justify-center gap-8">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-16 w-16 rounded-full border-2 border-muted hover:border-red-500/50 text-muted-foreground hover:text-red-500 hover:bg-red-500/5 transition-all hover:scale-110 shadow-sm"
+                                        onClick={() => handleSwipe("LEFT")}
+                                    >
+                                        <X className="h-7 w-7" />
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-14 w-14 rounded-full border-2 border-muted hover:border-blue-500/50 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/5 transition-all hover:scale-110 shadow-sm"
+                                        onClick={() => handleSwipe("SUPER_LIKE")}
+                                    >
+                                        <Star className="h-6 w-6 fill-current" />
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-16 w-16 rounded-full border-2 border-muted hover:border-green-500/50 text-muted-foreground hover:text-green-500 hover:bg-green-500/5 transition-all hover:scale-110 shadow-sm"
+                                        onClick={() => handleSwipe("RIGHT")}
+                                    >
+                                        <Heart className="h-7 w-7 fill-current" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex justify-center gap-8 pt-6 border-t mt-6">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-16 w-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 transition-transform hover:scale-110"
-                                onClick={() => handleSwipe("LEFT")}
-                            >
-                                <X className="h-8 w-8" />
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-14 w-14 rounded-full border-2 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-transform hover:scale-110"
-                                onClick={() => handleSwipe("SUPER_LIKE")}
-                            >
-                                <Star className="h-6 w-6 fill-current" />
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-16 w-16 rounded-full border-2 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 transition-transform hover:scale-110"
-                                onClick={() => handleSwipe("RIGHT")}
-                            >
-                                <Heart className="h-8 w-8 fill-current" />
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                    </Card>
+                </motion.div>
             </div>
         </div>
     )

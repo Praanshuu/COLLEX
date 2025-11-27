@@ -30,7 +30,16 @@ export function ChatButton({ sellerId, listingId }: ChatButtonProps) {
         try {
             const result = await startConversation(sellerId, listingId)
             if (!result.success) {
-                toast.error(result.message || "Failed to start chat")
+                if (result.code === "UNVERIFIED") {
+                    toast.error(result.message, {
+                        action: {
+                            label: "Verify Now",
+                            onClick: () => router.push("/profile")
+                        }
+                    })
+                } else {
+                    toast.error(result.message || "Failed to start chat")
+                }
             } else {
                 router.push(`/messages/${result.conversationId}`)
             }

@@ -34,9 +34,18 @@ export function SwipeDeck() {
         try {
             const data = await getPotentialRoommates()
             setProfiles(data as any)
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch profiles", error)
-            toast.error("Failed to load profiles")
+            if (error.message === "UNVERIFIED" || error.digest?.includes("UNVERIFIED")) {
+                toast.error("Please verify your identity to find roommates.", {
+                    action: {
+                        label: "Verify Now",
+                        onClick: () => window.location.href = "/profile"
+                    }
+                })
+            } else {
+                toast.error("Failed to load profiles")
+            }
         } finally {
             setLoading(false)
         }
@@ -53,6 +62,16 @@ export function SwipeDeck() {
 
         try {
             const result = await swipeProfile(userId, direction)
+
+            if (result.error) {
+                toast.error(result.message)
+                // Revert optimistic update
+                if (swipedProfile) {
+                    setProfiles(prev => [swipedProfile, ...prev])
+                }
+                return
+            }
+
             if (result.isMatch && swipedProfile) {
                 setMatch({
                     name: swipedProfile.name,
@@ -63,7 +82,10 @@ export function SwipeDeck() {
             }
         } catch (error) {
             console.error("Swipe failed", error)
-            // Ideally revert state here, but for swipe deck it's tricky
+            // Revert optimistic update
+            if (swipedProfile) {
+                setProfiles(prev => [swipedProfile, ...prev])
+            }
         }
     }
 

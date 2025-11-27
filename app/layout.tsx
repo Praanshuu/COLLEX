@@ -6,6 +6,8 @@ import { ClerkProvider } from "@clerk/nextjs"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
 
+import { OnboardingGuard } from "@/components/auth/OnboardingGuard"
+
 export const metadata: Metadata = {
   title: "Collex - College Marketplace",
   description: "Buy, sell, and connect exclusively for your campus",
@@ -30,6 +32,7 @@ html {
           `}</style>
         </head>
         <body>
+          <OnboardingGuard />
           <Navigation />
           <main className="min-h-[calc(100vh-4rem)]">{children}</main>
         </body>

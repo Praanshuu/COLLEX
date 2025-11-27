@@ -12,6 +12,8 @@ interface Message {
     senderId: string
     content: string
     createdAt: Date
+    attachmentUrl?: string | null
+    attachmentType?: string | null
 }
 
 interface MessageListProps {

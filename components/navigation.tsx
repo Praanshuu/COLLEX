@@ -7,16 +7,19 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 import { Notifications } from "@/components/Notifications"
+import { useState } from "react"
+
+import { Home, Search, List, MessageCircle, Users, PlusCircle, CreditCard, User } from "lucide-react"
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/browse", label: "Browse" },
-  { href: "/my-listings", label: "My Listings" },
-  { href: "/messages", label: "Messages" },
-  { href: "/roommate-finder", label: "Roommate Finder" },
-  { href: "/add-listing", label: "Add Listing" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/profile", label: "Profile" },
+  { href: "/", label: "Home", icon: Home },
+  { href: "/browse", label: "Browse", icon: Search },
+  { href: "/my-listings", label: "My Listings", icon: List },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
+  { href: "/roommate-finder", label: "Roommate Finder", icon: Users },
+  { href: "/add-listing", label: "Add Listing", icon: PlusCircle },
+  { href: "/pricing", label: "Pricing", icon: CreditCard },
+  { href: "/profile", label: "Profile", icon: User },
 ]
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -24,6 +27,7 @@ import { Menu } from "lucide-react"
 
 export function Navigation() {
   const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
     <motion.nav
@@ -96,41 +100,62 @@ export function Navigation() {
 
             {/* Mobile Menu Trigger */}
             <div className="md:hidden">
-              <Sheet>
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
                     <Menu className="h-6 w-6" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                  <SheetTitle className="text-left mb-6">Menu</SheetTitle>
-                  <div className="flex flex-col gap-4">
+                <SheetContent side="right" className="w-[300px] sm:w-[400px] flex flex-col">
+                  <SheetTitle className="text-left mb-6 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">Menu</SheetTitle>
+                  <div className="flex flex-col gap-2 flex-1">
                     {navItems.map((item) => {
                       const isActive = pathname === item.href
                       return (
                         <Link
                           key={item.href}
                           href={item.href}
+                          onClick={() => setIsOpen(false)}
                           className={cn(
-                            "px-4 py-3 rounded-lg text-lg font-medium transition-colors",
+                            "flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200",
                             isActive
-                              ? "bg-primary/10 text-primary"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                              ? "bg-primary/10 text-primary translate-x-1"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1"
                           )}
                         >
+                          <item.icon className="h-5 w-5" />
                           {item.label}
                         </Link>
                       )
                     })}
+                  </div>
+
+                  <div className="pt-6 mt-auto border-t space-y-4">
                     <SignedOut>
-                      <div className="pt-4 mt-4 border-t grid gap-2">
-                        <SignInButton mode="modal">
-                          <Button variant="outline" className="w-full justify-start">
-                            Login
-                          </Button>
-                        </SignInButton>
-                      </div>
+                      <SignInButton mode="modal">
+                        <Button variant="outline" className="w-full justify-center h-11 text-base">
+                          Login
+                        </Button>
+                      </SignInButton>
+                      <SignUpButton mode="modal">
+                        <Button className="w-full justify-center h-11 text-base bg-gradient-to-r from-purple-600 to-pink-600">
+                          Sign Up
+                        </Button>
+                      </SignUpButton>
                     </SignedOut>
+                    <SignedIn>
+                      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50">
+                        <UserButton
+                          showName
+                          appearance={{
+                            elements: {
+                              userButtonBox: "flex-row-reverse",
+                              userButtonOuterIdentifier: "font-medium text-sm"
+                            }
+                          }}
+                        />
+                      </div>
+                    </SignedIn>
                   </div>
                 </SheetContent>
               </Sheet>

@@ -25,6 +25,12 @@ export async function createListing(prevState: any, formData: FormData) {
         return { message: "Missing required fields", error: true }
     }
 
+    // Check Verification Status
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (user?.verificationStatus !== "VERIFIED") {
+        return { message: "Please verify your identity to create a listing.", error: true, code: "UNVERIFIED" }
+    }
+
     try {
         // Check for active subscription to auto-promote
         const subscription = await prisma.userSubscription.findFirst({
@@ -260,6 +266,12 @@ export async function upsertRoommateProfile(prevState: any, formData: FormData) 
     const user = await currentUser()
     const email = user?.emailAddresses[0]?.emailAddress || ""
 
+    // Check Verification Status
+    const dbUser = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (dbUser?.verificationStatus !== "VERIFIED") {
+        return { message: "Please verify your identity to create a roommate profile.", error: true, code: "UNVERIFIED" }
+    }
+
     try {
         // Ensure User record exists/is updated
         await prisma.user.upsert({
@@ -298,6 +310,15 @@ export async function getPotentialRoommates() {
     if (!userId) return []
 
     try {
+        // Check Verification Status
+        const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+        if (user?.verificationStatus !== "VERIFIED") {
+            // Return empty or throw specific error if UI can handle it
+            // For now, returning empty list effectively blocks them
+            // But throwing error allows UI to show "Verify" toast
+            throw new Error("UNVERIFIED")
+        }
+
         // Get current user's profile to filter/sort
         const myProfile = await prisma.roommateProfile.findUnique({
             where: { userId }
@@ -370,6 +391,12 @@ export async function swipeProfile(targetUserId: string, direction: "RIGHT" | "L
     if (!userId) return { message: "Unauthorized", error: true }
 
     try {
+        // Check Verification Status - REMOVED for performance (checked in getPotentialRoommates)
+        // const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+        // if (user?.verificationStatus !== "VERIFIED") {
+        //     return { message: "Please verify your identity to use Roommate Finder.", error: true, code: "UNVERIFIED" }
+        // }
+
         // Check Daily Limit (e.g., 50 swipes per day)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -894,6 +921,12 @@ export async function startConversation(targetUserId: string, listingId?: string
     if (!userId) return { success: false, message: "Unauthorized" }
 
     try {
+        // Check Verification Status
+        const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+        if (user?.verificationStatus !== "VERIFIED") {
+            return { success: false, message: "Please verify your identity to start a chat.", code: "UNVERIFIED" }
+        }
+
         console.log(`Starting conversation between ${userId} and ${targetUserId} for listing ${listingId}`)
 
         // Check if conversation already exists
@@ -994,7 +1027,48 @@ export async function getMessages(conversationId: string) {
     }
 }
 
-export async function sendMessage(conversationId: string, content: string) {
+
+// --- File Upload Action ---
+import { writeFile, mkdir } from "fs/promises"
+import { join } from "path"
+
+export async function uploadFile(formData: FormData) {
+    const { userId } = await auth()
+    if (!userId) return { success: false, message: "Unauthorized" }
+
+    const file = formData.get("file") as File
+    if (!file) {
+        return { success: false, message: "No file uploaded" }
+    }
+
+    try {
+        const bytes = await file.arrayBuffer()
+        const buffer = Buffer.from(bytes)
+
+        // Create unique filename
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`
+        const filename = `${uniqueSuffix}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "")}`
+
+        // Ensure directory exists
+        const uploadDir = join(process.cwd(), "public", "uploads")
+        await mkdir(uploadDir, { recursive: true })
+
+        // Write file
+        const filepath = join(uploadDir, filename)
+        await writeFile(filepath, buffer)
+
+        return {
+            success: true,
+            url: `/uploads/${filename}`,
+            type: file.type.startsWith("image/") ? "IMAGE" : "DOCUMENT"
+        }
+    } catch (e) {
+        console.error("Upload error:", e)
+        return { success: false, message: "Upload failed" }
+    }
+}
+
+export async function sendMessage(conversationId: string, content: string, attachmentUrl?: string, attachmentType?: string) {
     const { userId } = await auth()
     if (!userId) return { message: "Unauthorized", error: true }
 
@@ -1007,17 +1081,33 @@ export async function sendMessage(conversationId: string, content: string) {
             return { message: "Unauthorized", error: true }
         }
 
-        await prisma.message.create({
+        const message = await prisma.message.create({
             data: {
                 conversationId,
                 senderId: userId,
-                content
+                content: content || "", // Content can be empty if attachment exists
+                attachmentUrl,
+                attachmentType
             }
         })
 
         await prisma.conversation.update({
             where: { id: conversationId },
             data: { updatedAt: new Date() }
+        })
+
+        // Create Notification for the other user
+        const otherUserId = conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id
+        const sender = await prisma.user.findUnique({ where: { clerkId: userId }, select: { name: true } })
+
+        await prisma.notification.create({
+            data: {
+                userId: otherUserId,
+                type: "MESSAGE",
+                title: `New message from ${sender?.name || "Someone"}`,
+                message: content || (attachmentType === "IMAGE" ? "Sent an image" : "Sent a file"),
+                link: `/messages/${conversationId}`
+            }
         })
 
         revalidatePath(`/messages/${conversationId}`)
@@ -1027,6 +1117,7 @@ export async function sendMessage(conversationId: string, content: string) {
         return { message: "Failed to send message", error: true }
     }
 }
+
 
 export async function updatePhoneNumber(phoneNumber: string) {
     const { userId } = await auth()
@@ -1122,5 +1213,181 @@ export async function getConversationDetails(conversationId: string) {
     } catch (e) {
         console.error("Error fetching conversation details: ", e)
         return null
+    }
+}
+
+export async function completeOnboarding(formData: FormData) {
+    const { userId } = await auth()
+    if (!userId) return { message: "Unauthorized", error: true }
+
+    const name = formData.get("name") as string
+    const rollNumber = formData.get("rollNumber") as string
+    const collegeName = formData.get("collegeName") as string
+    const course = formData.get("course") as string
+    const validYear = formData.get("validYear") as string
+    const phoneNumber = formData.get("phoneNumber") as string
+
+    try {
+        // Check if roll number is already taken by another user
+        const existingUser = await prisma.user.findUnique({
+            where: { rollNumber }
+        })
+
+        if (existingUser && existingUser.clerkId !== userId) {
+            return { message: "This Roll Number is already registered.", error: true }
+        }
+
+        const user = await currentUser()
+        const email = user?.emailAddresses[0]?.emailAddress || ""
+
+        // Update or Create user profile
+        await prisma.user.upsert({
+            where: { clerkId: userId },
+            update: {
+                name,
+                rollNumber,
+                collegeName,
+                course,
+                validYear,
+                phoneNumber,
+            },
+            create: {
+                clerkId: userId,
+                email,
+                name,
+                rollNumber,
+                collegeName,
+                course,
+                validYear,
+                phoneNumber,
+                avatar: user?.imageUrl
+            }
+        })
+
+        return { message: "Profile updated!", error: false }
+    } catch (e) {
+        console.error("Error completing onboarding: ", e)
+        return { message: "Failed to update profile", error: true }
+    }
+}
+
+export async function verifyIdentity(formData: FormData) {
+    const { userId } = await auth()
+    if (!userId) return { message: "Unauthorized", error: true }
+
+    const imageFile = formData.get("image") as File
+    if (!imageFile) return { message: "No image provided", error: true }
+
+    try {
+        // 1. Convert File to Buffer for Tesseract
+        const arrayBuffer = await imageFile.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+
+        // 2. Perform OCR
+        // Dynamically import to avoid server startup issues if not needed immediately
+        const { createWorker } = await import('tesseract.js');
+        const levenshtein = (await import('fast-levenshtein')).default;
+
+        const path = await import("path")
+        const workerPath = path.join(process.cwd(), "node_modules", "tesseract.js", "src", "worker-script", "node", "index.js")
+
+        let worker;
+        let text = "";
+        try {
+            // Use local worker path to avoid bundling issues
+            worker = await createWorker('eng', 1, {
+                workerPath,
+                logger: m => console.log(m)
+            })
+            const ret = await worker.recognize(buffer)
+            text = ret.data.text.toLowerCase()
+        } catch (ocrError) {
+            console.error("OCR Failed:", ocrError)
+            return { message: "Failed to process image. Please try a clearer image.", error: true }
+        } finally {
+            if (worker) {
+                await worker.terminate()
+            }
+        }
+
+        // 3. Fetch User Data
+        const user = await prisma.user.findUnique({
+            where: { clerkId: userId }
+        })
+
+        if (!user || !user.name || !user.rollNumber) {
+            return { message: "Profile incomplete. Please complete onboarding first.", error: true }
+        }
+
+        // 4. Fuzzy Match Logic
+        const targetName = user.name.toLowerCase()
+        const targetRoll = user.rollNumber.toLowerCase()
+
+        // Simple check: Is roll number present?
+        const rollMatch = text.includes(targetRoll)
+
+        // Name match: Check if name (or parts of it) are present
+        // We'll check if the Levenshtein distance of any line is close to the name
+        const lines = text.split('\n')
+        let nameMatchScore = 0
+
+        for (const line of lines) {
+            const distance = levenshtein.get(line.trim(), targetName)
+            const similarity = 1 - (distance / Math.max(line.length, targetName.length))
+            if (similarity > nameMatchScore) {
+                nameMatchScore = similarity
+            }
+        }
+
+        // 5. Calculate Final Score
+        // Roll Number is critical (50%), Name is secondary (50%)
+        let finalScore = 0
+        if (rollMatch) finalScore += 50
+        if (nameMatchScore > 0.6) finalScore += 50 // Threshold for name match
+
+        const isVerified = finalScore >= 70
+
+        // 6. Update User
+        await prisma.user.update({
+            where: { clerkId: userId },
+            data: {
+                verificationStatus: isVerified ? "VERIFIED" : "REJECTED",
+                verificationScore: finalScore,
+                verificationData: { ocrText: text } // Store text for manual review if needed
+            }
+        })
+
+        if (isVerified) {
+            return { message: "Identity Verified Successfully! 🎉", error: false, verified: true }
+        } else {
+            return { message: "Verification Failed. Details didn't match clearly.", error: true, verified: false }
+        }
+
+    } catch (e) {
+        console.error("Error verifying identity: ", e)
+        return { message: "Verification process failed", error: true }
+    }
+}
+
+export async function checkOnboardingStatus() {
+    const { userId } = await auth()
+    if (!userId) return { isOnboarded: false, isVerified: false, isLoggedIn: false }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { clerkId: userId },
+            select: { rollNumber: true, verificationStatus: true }
+        })
+
+        if (!user) return { isOnboarded: false, isVerified: false, isLoggedIn: true }
+
+        return {
+            isOnboarded: !!user.rollNumber,
+            isVerified: user.verificationStatus === "VERIFIED",
+            isLoggedIn: true
+        }
+    } catch (e) {
+        console.error("Error checking onboarding status: ", e)
+        return { isOnboarded: false, isVerified: false, isLoggedIn: true }
     }
 }

@@ -84,7 +84,9 @@ export function Notifications() {
                                             {notification.title}
                                         </p>
                                         <span className="text-xs text-muted-foreground">
-                                            {new Date(notification.createdAt).toLocaleDateString()}
+                                            {new Date(notification.createdAt).toLocaleDateString() === new Date().toLocaleDateString()
+                                                ? new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                : new Date(notification.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground line-clamp-2">

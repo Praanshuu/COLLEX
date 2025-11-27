@@ -8,6 +8,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getUserSubscription } from "@/app/actions"
 import { Zap, ShieldCheck } from "lucide-react"
+import { VerifyButton } from "@/components/profile/VerifyButton"
 
 async function SubscriptionCard() {
   const sub = await getUserSubscription()
@@ -90,11 +91,7 @@ export default async function ProfilePage() {
                     </Link>
                   </Button>
                   {(user.verificationStatus === "UNVERIFIED" || user.verificationStatus === "REJECTED") && (
-                    <Button size="sm" asChild className={user.verificationStatus === "REJECTED" ? "bg-red-600 hover:bg-red-700" : ""}>
-                      <Link href="/verify">
-                        {user.verificationStatus === "REJECTED" ? "Retry Verification" : "Verify Student ID"}
-                      </Link>
-                    </Button>
+                    <VerifyButton user={user} className={user.verificationStatus === "REJECTED" ? "bg-red-600 hover:bg-red-700" : ""} />
                   )}
                 </div>
               </div>
@@ -221,6 +218,6 @@ export default async function ProfilePage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 }

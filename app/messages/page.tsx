@@ -63,22 +63,24 @@ export default function MessagesPage() {
                                             <AvatarFallback>{conv.otherUser.name?.[0] || "?"}</AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-baseline mb-1">
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="font-semibold truncate">{conv.otherUser.name || "User"}</h3>
+                                            <div className="flex justify-between items-start mb-1 gap-2">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                                                    <h3 className="font-semibold truncate text-base">{conv.otherUser.name || "User"}</h3>
                                                     {conv.listing ? (
-                                                        <span className="text-xs text-muted-foreground bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 truncate max-w-[150px]">
-                                                            Listing: {conv.listing.title}
+                                                        <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 truncate max-w-[120px] w-fit">
+                                                            {conv.listing.title}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-xs text-muted-foreground bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
+                                                        <span className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 w-fit">
                                                             Roommate Match
                                                         </span>
                                                     )}
                                                 </div>
                                                 {conv.lastMessage && (
-                                                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                                                        {new Date(conv.lastMessage.createdAt).toLocaleDateString()}
+                                                    <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                                                        {new Date(conv.lastMessage.createdAt).toLocaleDateString() === new Date().toLocaleDateString()
+                                                            ? new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                            : new Date(conv.lastMessage.createdAt).toLocaleDateString()}
                                                     </span>
                                                 )}
                                             </div>
