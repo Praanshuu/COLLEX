@@ -6,6 +6,7 @@ import { ArrowLeft, MessageCircle, Share2, ShieldCheck, User } from "lucide-reac
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { ChatButton } from "@/components/ChatButton"
 
 export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -67,10 +68,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <Button className="flex-1 bg-green-600 hover:bg-green-700">
-                                        <MessageCircle className="w-4 h-4 mr-2" />
-                                        Chat with Seller
-                                    </Button>
+                                    <ChatButton sellerId={listing.userId} listingId={listing.id} />
                                     <Button variant="outline" size="icon">
                                         <Share2 className="w-4 h-4" />
                                     </Button>

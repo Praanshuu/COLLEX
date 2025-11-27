@@ -66,9 +66,13 @@ export default function MessagesPage() {
                                             <div className="flex justify-between items-baseline mb-1">
                                                 <div className="flex items-center gap-2">
                                                     <h3 className="font-semibold truncate">{conv.otherUser.name || "User"}</h3>
-                                                    {conv.listing && (
-                                                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full border truncate max-w-[150px]">
-                                                            re: {conv.listing.title}
+                                                    {conv.listing ? (
+                                                        <span className="text-xs text-muted-foreground bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 truncate max-w-[150px]">
+                                                            Listing: {conv.listing.title}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
+                                                            Roommate Match
                                                         </span>
                                                     )}
                                                 </div>

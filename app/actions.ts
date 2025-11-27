@@ -58,19 +58,48 @@ export async function createListing(prevState: any, formData: FormData) {
     }
 }
 
-export async function getListings(category?: string, search?: string) {
+export async function getListings(filters?: {
+    category?: string
+    search?: string
+    minPrice?: number
+    maxPrice?: number
+    sortBy?: string
+}) {
     try {
         const where: any = {}
 
-        if (category && category !== "All") {
-            where.category = category
+        if (filters?.category && filters.category !== "All") {
+            where.category = filters.category
         }
 
-        if (search) {
+        if (filters?.search) {
             where.OR = [
-                { title: { contains: search, mode: "insensitive" } },
-                { description: { contains: search, mode: "insensitive" } },
+                { title: { contains: filters.search, mode: "insensitive" } },
+                { description: { contains: filters.search, mode: "insensitive" } },
             ]
+        }
+
+        if (filters?.minPrice !== undefined || filters?.maxPrice !== undefined) {
+            where.price = {}
+            if (filters.minPrice !== undefined) where.price.gte = filters.minPrice
+            if (filters.maxPrice !== undefined) where.price.lte = filters.maxPrice
+        }
+
+        const orderBy: any[] = [
+            { promotedUntil: "desc" } // Promoted items always first
+        ]
+
+        switch (filters?.sortBy) {
+            case "price-low":
+                orderBy.push({ price: "asc" })
+                break
+            case "price-high":
+                orderBy.push({ price: "desc" })
+                break
+            case "newest":
+            default:
+                orderBy.push({ createdAt: "desc" })
+                break
         }
 
         const listings = await prisma.listing.findMany({
@@ -85,10 +114,7 @@ export async function getListings(category?: string, search?: string) {
                     }
                 }
             },
-            orderBy: [
-                { promotedUntil: "desc" }, // Promoted items first
-                { createdAt: "desc" },
-            ],
+            orderBy: orderBy,
         })
 
         return listings.map(listing => ({
@@ -207,7 +233,9 @@ export async function markAsSold(listingId: string) {
 
 // --- Roommate Finder Actions ---
 
-export async function createRoommateProfile(prevState: any, formData: FormData) {
+// --- Roommate Finder Actions ---
+
+export async function upsertRoommateProfile(prevState: any, formData: FormData) {
     const { userId } = await auth()
     if (!userId) return { message: "Unauthorized", error: true }
 
@@ -217,12 +245,44 @@ export async function createRoommateProfile(prevState: any, formData: FormData) 
     const budget = parseFloat(formData.get("budget") as string)
     const bio = formData.get("bio") as string
     const preferences = formData.get("preferences") as string
+    const location = formData.get("location") as string
+    const occupation = formData.get("occupation") as string
+    const moveInDate = formData.get("moveInDate") ? new Date(formData.get("moveInDate") as string) : null
+
+    // Handle tags (comma separated string from form)
+    const tagsString = formData.get("tags") as string
+    const tags = tagsString ? tagsString.split(",").map(t => t.trim()).filter(Boolean) : []
+
+    // Handle images (JSON string of URLs from client-side upload)
+    const imagesString = formData.get("images") as string
+    const images = imagesString ? JSON.parse(imagesString) : []
+
+    const user = await currentUser()
+    const email = user?.emailAddresses[0]?.emailAddress || ""
 
     try {
+        // Ensure User record exists/is updated
+        await prisma.user.upsert({
+            where: { clerkId: userId },
+            update: { name },
+            create: {
+                clerkId: userId,
+                name,
+                email,
+                avatar: user?.imageUrl
+            }
+        })
+
         await prisma.roommateProfile.upsert({
             where: { userId },
-            update: { name, age, gender, budget, bio, preferences },
-            create: { userId, name, age, gender, budget, bio, preferences },
+            update: {
+                name, age, gender, budget, bio, preferences,
+                location, occupation, moveInDate, tags, images
+            },
+            create: {
+                userId, name, age, gender, budget, bio, preferences,
+                location, occupation, moveInDate, tags, images
+            },
         })
 
         revalidatePath("/roommate-finder")
@@ -233,23 +293,254 @@ export async function createRoommateProfile(prevState: any, formData: FormData) 
     }
 }
 
-export async function getRoommateProfiles(filters?: any) {
-    try {
-        const where: any = {}
-        if (filters?.gender && filters.gender !== "All") where.gender = filters.gender
-        if (filters?.budget) where.budget = { lte: parseFloat(filters.budget) }
+export async function getPotentialRoommates() {
+    const { userId } = await auth()
+    if (!userId) return []
 
-        return await prisma.roommateProfile.findMany({
-            where,
-            orderBy: { createdAt: "desc" },
+    try {
+        // Get current user's profile to filter/sort
+        const myProfile = await prisma.roommateProfile.findUnique({
+            where: { userId }
         })
+
+        if (!myProfile) return []
+
+        // Get IDs of users already swiped on
+        const swipedRecords = await prisma.swipe.findMany({
+            where: { swiperId: userId },
+            select: { swipedId: true }
+        })
+        const swipedIds = swipedRecords.map(s => s.swipedId)
+
+        // Fetch potential matches
+        // 1. Exclude self
+        // 2. Exclude already swiped
+        // 3. Filter by gender preference (if implemented, for now just show all or same gender logic if needed)
+        // 4. Budget range (+/- 20% logic could be added here)
+
+        const candidates = await prisma.roommateProfile.findMany({
+            where: {
+                userId: {
+                    notIn: [userId, ...swipedIds]
+                },
+                // Optional: Add basic filtering here
+                // gender: myProfile.gender === 'Female' ? 'Female' : undefined // Example logic
+            },
+            take: 20 // Fetch in batches
+        })
+
+        // Intelligent Sorting (Client-side or here)
+        // Sort by:
+        // 1. Location match
+        // 2. Tag overlap
+        // 3. Budget closeness
+
+        const scoredCandidates = candidates.map(candidate => {
+            let score = 0
+
+            // Location match (+5)
+            if (candidate.location && myProfile.location &&
+                candidate.location.toLowerCase().includes(myProfile.location.toLowerCase())) {
+                score += 5
+            }
+
+            // Tag overlap (+2 per tag)
+            const commonTags = candidate.tags.filter(tag => myProfile.tags.includes(tag))
+            score += (commonTags.length * 2)
+
+            // Budget closeness (closer is better)
+            const budgetDiff = Math.abs(candidate.budget - myProfile.budget)
+            if (budgetDiff < 2000) score += 3
+            else if (budgetDiff < 5000) score += 1
+
+            return { ...candidate, score }
+        })
+
+        // Return sorted by score descending
+        return scoredCandidates.sort((a, b) => b.score - a.score)
+
     } catch (e) {
         console.error("Error fetching profiles: ", e)
         return []
     }
 }
 
-// --- User Profile & Verification Actions ---
+export async function swipeProfile(targetUserId: string, direction: "RIGHT" | "LEFT" | "SUPER_LIKE") {
+    const { userId } = await auth()
+    if (!userId) return { message: "Unauthorized", error: true }
+
+    try {
+        // Check Daily Limit (e.g., 50 swipes per day)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        const swipesToday = await prisma.swipe.count({
+            where: {
+                swiperId: userId,
+                createdAt: { gte: today }
+            }
+        })
+
+        if (swipesToday >= 50) {
+            return { message: "Daily swipe limit reached! Come back tomorrow.", error: true }
+        }
+
+        // Record the swipe
+        await prisma.swipe.create({
+            data: {
+                swiperId: userId,
+                swipedId: targetUserId,
+                direction,
+                type: direction === "SUPER_LIKE" ? "SUPER_LIKE" : "LIKE"
+            }
+        })
+
+        let isMatch = false
+
+        // Check for match if swiped RIGHT or SUPER_LIKE
+        if (direction === "RIGHT" || direction === "SUPER_LIKE") {
+            const otherSwipe = await prisma.swipe.findUnique({
+                where: {
+                    swiperId_swipedId: {
+                        swiperId: targetUserId,
+                        swipedId: userId
+                    }
+                }
+            })
+
+            if (otherSwipe && (otherSwipe.direction === "RIGHT" || otherSwipe.direction === "SUPER_LIKE")) {
+                isMatch = true
+
+                // Create a conversation automatically
+                const result = await startConversation(targetUserId)
+
+                if (result.success && result.conversationId) {
+                    // Fetch names for better notifications
+                    const currentUser = await prisma.user.findUnique({ where: { clerkId: userId }, select: { name: true } })
+                    const targetUser = await prisma.user.findUnique({ where: { clerkId: targetUserId }, select: { name: true } })
+
+                    const currentUserName = currentUser?.name || "Someone"
+                    const targetUserName = targetUser?.name || "Someone"
+
+                    // Create Notifications
+                    await prisma.notification.createMany({
+                        data: [
+                            {
+                                userId: userId,
+                                type: "MATCH",
+                                title: "It's a Match! 🎉",
+                                message: `You matched with ${targetUserName}!`,
+                                link: `/messages/${result.conversationId}`
+                            },
+                            {
+                                userId: targetUserId,
+                                type: "MATCH",
+                                title: "It's a Match! 🎉",
+                                message: `${currentUserName} liked you back!`,
+                                link: `/messages/${result.conversationId}`
+                            }
+                        ]
+                    })
+
+                    return { isMatch: true, conversationId: result.conversationId }
+                }
+            } else {
+                // Not a match yet, but notify the other user that they were liked
+                await prisma.notification.create({
+                    data: {
+                        userId: targetUserId,
+                        type: "LIKE",
+                        title: "Someone liked you! 👀",
+                        message: "Check out who's interested in being your roommate.",
+                        link: `/roommate-finder/profile/${userId}`
+                    }
+                })
+                return { isMatch: false }
+            }
+        }
+
+        return { isMatch: false }
+    } catch (e) {
+        console.error("Error swiping profile: ", e)
+        return { isMatch: false, error: true }
+    }
+}
+
+export async function getRoommateProfile(targetUserId: string) {
+    const { userId } = await auth()
+    if (!userId) return null
+
+    try {
+        const profile = await prisma.roommateProfile.findUnique({
+            where: { userId: targetUserId }
+        })
+        return profile
+    } catch (e) {
+        console.error("Error fetching roommate profile: ", e)
+        return null
+    }
+}
+
+export async function undoLastSwipe() {
+    const { userId } = await auth()
+    if (!userId) return { message: "Unauthorized", error: true }
+
+    try {
+        // Find the most recent swipe
+        const lastSwipe = await prisma.swipe.findFirst({
+            where: { swiperId: userId },
+            orderBy: { createdAt: 'desc' }
+        })
+
+        if (!lastSwipe) {
+            return { message: "No swipes to undo", error: true }
+        }
+
+        // Delete it
+        await prisma.swipe.delete({
+            where: { id: lastSwipe.id }
+        })
+
+        revalidatePath("/roommate-finder")
+        return { message: "Undid last swipe", error: false }
+    } catch (e) {
+        console.error("Error undoing swipe: ", e)
+        return { message: "Failed to undo", error: true }
+    }
+}
+
+export async function getNotifications() {
+    const { userId } = await auth()
+    if (!userId) return []
+
+    try {
+        const notifications = await prisma.notification.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' }
+        })
+        return notifications
+    } catch (e) {
+        console.error("Error fetching notifications: ", e)
+        return []
+    }
+}
+
+export async function markNotificationRead(notificationId: string) {
+    const { userId } = await auth()
+    if (!userId) return { message: "Unauthorized", error: true }
+
+    try {
+        await prisma.notification.update({
+            where: { id: notificationId },
+            data: { read: true }
+        })
+        revalidatePath("/")
+        return { message: "Marked as read", error: false }
+    } catch (e) {
+        console.error("Error marking notification read: ", e)
+        return { message: "Failed to mark read", error: true }
+    }
+}
 
 export async function getUserProfile() {
     const user = await currentUser()
@@ -598,40 +889,42 @@ export async function promoteListing(listingId: string) {
     }
 }
 
-// --- Messaging Actions ---
-
-export async function startConversation(otherUserId: string, listingId?: string) {
+export async function startConversation(targetUserId: string, listingId?: string) {
     const { userId } = await auth()
-    if (!userId) return { message: "Unauthorized", error: true }
-
-    if (userId === otherUserId) return { message: "Cannot chat with yourself", error: true }
+    if (!userId) return { success: false, message: "Unauthorized" }
 
     try {
-        const existingConv = await prisma.conversation.findFirst({
+        console.log(`Starting conversation between ${userId} and ${targetUserId} for listing ${listingId}`)
+
+        // Check if conversation already exists
+        const existing = await prisma.conversation.findFirst({
             where: {
                 OR: [
-                    { user1Id: userId, user2Id: otherUserId, listingId: listingId || null },
-                    { user1Id: otherUserId, user2Id: userId, listingId: listingId || null },
+                    { user1Id: userId, user2Id: targetUserId, listingId: listingId || null },
+                    { user1Id: targetUserId, user2Id: userId, listingId: listingId || null }
                 ]
             }
         })
 
-        if (existingConv) {
-            return { conversationId: existingConv.id, error: false }
+        if (existing) {
+            console.log("Found existing conversation:", existing.id)
+            return { success: true, conversationId: existing.id }
         }
 
+        // Create new conversation
         const conversation = await prisma.conversation.create({
             data: {
                 user1Id: userId,
-                user2Id: otherUserId,
+                user2Id: targetUserId,
                 listingId: listingId || null
             }
         })
 
-        return { conversationId: conversation.id, error: false }
+        console.log("Created new conversation:", conversation.id)
+        return { success: true, conversationId: conversation.id }
     } catch (e) {
         console.error("Error starting conversation: ", e)
-        return { message: "Failed to start conversation", error: true }
+        return { success: false, message: "Failed to start conversation" }
     }
 }
 
@@ -668,7 +961,7 @@ export async function getConversations() {
             const otherUser = await prisma.user.findUnique({
                 where: { clerkId: otherUserId },
                 select: { name: true, avatar: true }
-            })
+            }) || { name: "Unknown User", avatar: null }
 
             return {
                 ...conv,
@@ -816,6 +1109,7 @@ export async function getConversationDetails(conversationId: string) {
             select: {
                 clerkId: true,
                 name: true,
+                avatar: true,
                 phoneNumber: true,
                 isPhoneVerified: true
             }

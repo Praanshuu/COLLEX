@@ -6,16 +6,21 @@ import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@cl
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
+import { Notifications } from "@/components/Notifications"
 
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/browse", label: "Browse" },
   { href: "/my-listings", label: "My Listings" },
   { href: "/messages", label: "Messages" },
+  { href: "/roommate-finder", label: "Roommate Finder" },
   { href: "/add-listing", label: "Add Listing" },
   { href: "/pricing", label: "Pricing" },
   { href: "/profile", label: "Profile" },
 ]
+
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { Menu } from "lucide-react"
 
 export function Navigation() {
   const pathname = usePathname()
@@ -62,49 +67,74 @@ export function Navigation() {
             })}
           </div>
 
-          {/* Auth Buttons */}
-          <div className="flex items-center space-x-4">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
-                  Login
-                </Button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <Button size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-opacity border-0">
-                  Sign Up
-                </Button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "h-9 w-9 ring-2 ring-primary/20 hover:ring-primary/50 transition-all"
-                  }
-                }}
-              />
-            </SignedIn>
-          </div>
-        </div>
+          {/* Mobile Menu & Auth */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="ghost" size="sm" className="hidden md:inline-flex hover:bg-primary/10 hover:text-primary">
+                    Login
+                  </Button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <Button size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-opacity border-0">
+                    Sign Up
+                  </Button>
+                </SignUpButton>
+              </SignedOut>
+              <SignedIn>
+                <Notifications />
+                <UserButton
+                  appearance={{
+                    elements: {
+                      avatarBox: "h-9 w-9 ring-2 ring-primary/20 hover:ring-primary/50 transition-all"
+                    }
+                  }}
+                />
+              </SignedIn>
+            </div>
 
-        {/* Mobile Navigation (Simplified for now, can be expanded with Framer Motion later) */}
-        <div className="md:hidden pb-4 overflow-x-auto scrollbar-hide">
-          <div className="flex space-x-2 px-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                  pathname === item.href
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {/* Mobile Menu Trigger */}
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                  <SheetTitle className="text-left mb-6">Menu</SheetTitle>
+                  <div className="flex flex-col gap-4">
+                    {navItems.map((item) => {
+                      const isActive = pathname === item.href
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            "px-4 py-3 rounded-lg text-lg font-medium transition-colors",
+                            isActive
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          {item.label}
+                        </Link>
+                      )
+                    })}
+                    <SignedOut>
+                      <div className="pt-4 mt-4 border-t grid gap-2">
+                        <SignInButton mode="modal">
+                          <Button variant="outline" className="w-full justify-start">
+                            Login
+                          </Button>
+                        </SignInButton>
+                      </div>
+                    </SignedOut>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </div>

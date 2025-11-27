@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ListingCard, type Listing } from "@/components/listing-card"
 import { SponsoredListings } from "@/components/sponsored-listings"
-import { Search, Filter, SlidersHorizontal } from "lucide-react"
+import { Search } from "lucide-react"
 import { getListings } from "@/app/actions"
 import { motion, AnimatePresence } from "framer-motion"
-
-const categories = ["All", "Books & Notes", "Electronics", "Furniture", "PGs & Flatmates", "Vehicles & More"]
+import { SearchFilters } from "@/components/SearchFilters"
 
 export default function BrowsePage() {
   const searchParams = useSearchParams()
@@ -18,15 +15,19 @@ export default function BrowsePage() {
 
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory)
-  const [sortBy, setSortBy] = useState("newest")
+  const [filters, setFilters] = useState({
+    search: "",
+    category: initialCategory,
+    minPrice: undefined as number | undefined,
+    maxPrice: undefined as number | undefined,
+    sortBy: "newest"
+  })
 
   useEffect(() => {
     const fetchListings = async () => {
       setLoading(true)
       try {
-        const data = await getListings(selectedCategory === "All" ? undefined : selectedCategory)
+        const data = await getListings(filters)
         setListings(data as Listing[])
       } catch (error) {
         console.error("Failed to fetch listings", error)
@@ -36,27 +37,7 @@ export default function BrowsePage() {
     }
 
     fetchListings()
-  }, [selectedCategory])
-
-  const filteredAndSortedListings = listings
-    .filter((listing) => {
-      if (!searchQuery) return true
-      return (
-        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.description.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price-low":
-          return a.price - b.price
-        case "price-high":
-          return b.price - a.price
-        case "newest":
-        default:
-          return 0
-      }
-    })
+  }, [filters])
 
   return (
     <div className="min-h-screen bg-background/50">
@@ -80,54 +61,18 @@ export default function BrowsePage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mb-8 space-y-4 bg-card/30 backdrop-blur-sm p-4 rounded-2xl border border-white/10 shadow-sm"
+          className="mb-8"
         >
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search Bar */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search listings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-background/50 border-white/20 focus:ring-primary"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full md:w-48 bg-background/50 border-white/20">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort Filter */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48 bg-background/50 border-white/20">
-                <SlidersHorizontal className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest First</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <SearchFilters
+            onFilterChange={setFilters}
+            initialCategory={initialCategory}
+          />
         </motion.div>
 
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">
           <p className="text-muted-foreground font-medium">
-            {loading ? "Loading..." : `${filteredAndSortedListings.length} listing${filteredAndSortedListings.length !== 1 ? "s" : ""} found`}
+            {loading ? "Loading..." : `${listings.length} listing${listings.length !== 1 ? "s" : ""} found`}
           </p>
         </div>
 
@@ -138,13 +83,13 @@ export default function BrowsePage() {
               <div key={i} className="h-[350px] bg-muted/50 animate-pulse rounded-2xl" />
             ))}
           </div>
-        ) : filteredAndSortedListings.length > 0 ? (
+        ) : listings.length > 0 ? (
           <motion.div
             layout
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           >
             <AnimatePresence>
-              {filteredAndSortedListings.map((listing) => (
+              {listings.map((listing) => (
                 <motion.div
                   key={listing.id}
                   layout

@@ -60,8 +60,36 @@ model RoommateProfile {
   budget      Float
   bio         String
   preferences String?  // e.g., "Non-smoker, Early riser"
+  location    String?
+  occupation  String?
+  moveInDate  DateTime?
+  tags        String[]
+  images      String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Swipe {
+  id        String   @id @default(cuid())
+  swiperId  String
+  swipedId  String
+  direction String   // "RIGHT" or "LEFT"
+  type      String   @default("LIKE") // LIKE, SUPER_LIKE, PASS
+  metadata  Json?    // For future extensibility
+  createdAt DateTime @default(now())
+
+  @@unique([swiperId, swipedId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   // Clerk ID of recipient
+  type      String   // MATCH, MESSAGE, SYSTEM
+  title     String
+  message   String
+  link      String?  // URL to redirect to
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model SubscriptionPlan {

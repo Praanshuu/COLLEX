@@ -52,8 +52,8 @@ export function ListingCard({ listing }: ListingCardProps) {
       const { startConversation } = await import("@/app/actions")
       const result = await startConversation(listing.userId, listing.id)
 
-      if (result.error) {
-        toast.error(result.message)
+      if (!result.success) {
+        toast.error(result.message || "Failed to start chat")
       } else {
         router.push(`/messages/${result.conversationId}`)
       }
@@ -110,7 +110,9 @@ export function ListingCard({ listing }: ListingCardProps) {
             <div className="flex flex-col gap-1 mb-3">
               <h3 className="font-bold text-lg line-clamp-1 text-foreground">{listing.title}</h3>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <span>Posted by {listing.postedBy}</span>
+                <Link href={`/profile/${listing.userId}`} className="hover:underline hover:text-primary z-10" onClick={(e) => e.stopPropagation()}>
+                  Posted by {listing.postedBy}
+                </Link>
                 {listing.userVerificationStatus === "VERIFIED" && (
                   <Badge variant="secondary" className="h-4 px-1 text-[10px] bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">
                     Verified
