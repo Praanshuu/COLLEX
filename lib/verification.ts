@@ -40,6 +40,10 @@ export async function processVerification(
         await worker.terminate();
 
         console.log("OCR Text:", ocrText);
+        console.log("--- DEBUG INFO ---");
+        console.log("User Profile Data:", JSON.stringify(profileData, null, 2));
+        console.log("Typed Roll Number:", typedRollNumber);
+        console.log("------------------");
 
         // 2. Logic Engine
         // Standardize roll number: Uppercase and remove special chars

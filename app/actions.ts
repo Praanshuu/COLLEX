@@ -307,16 +307,14 @@ export async function upsertRoommateProfile(prevState: any, formData: FormData) 
 
 export async function getPotentialRoommates() {
     const { userId } = await auth()
-    if (!userId) return []
+    if (!userId) return { success: false, error: "Unauthorized" }
 
     try {
         // Check Verification Status
         const user = await prisma.user.findUnique({ where: { clerkId: userId } })
         if (user?.verificationStatus !== "VERIFIED") {
-            // Return empty or throw specific error if UI can handle it
-            // For now, returning empty list effectively blocks them
-            // But throwing error allows UI to show "Verify" toast
-            throw new Error("UNVERIFIED")
+            // Return specific error code for UI handling
+            return { success: false, error: "Please verify your identity", code: "UNVERIFIED" }
         }
 
         // Get current user's profile to filter/sort
@@ -324,7 +322,7 @@ export async function getPotentialRoommates() {
             where: { userId }
         })
 
-        if (!myProfile) return []
+        if (!myProfile) return { success: true, data: [] }
 
         // Get IDs of users already swiped on
         const swipedRecords = await prisma.swipe.findMany({
@@ -378,11 +376,14 @@ export async function getPotentialRoommates() {
         })
 
         // Return sorted by score descending
-        return scoredCandidates.sort((a, b) => b.score - a.score)
+        return {
+            success: true,
+            data: scoredCandidates.sort((a, b) => b.score - a.score)
+        }
 
     } catch (e) {
         console.error("Error fetching profiles: ", e)
-        return []
+        return { success: false, error: "Failed to fetch profiles" }
     }
 }
 
@@ -1279,11 +1280,20 @@ export async function verifyIdentity(formData: FormData) {
     if (!imageFile) return { message: "No image provided", error: true }
 
     try {
-        // 1. Convert File to Buffer for Tesseract
+        // 1. Fetch User Data First
+        const user = await prisma.user.findUnique({
+            where: { clerkId: userId }
+        })
+
+        if (!user || !user.name || !user.rollNumber) {
+            return { message: "Profile incomplete. Please complete onboarding first.", error: true }
+        }
+
+        // 2. Convert File to Buffer for Tesseract
         const arrayBuffer = await imageFile.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        // 2. Perform OCR
+        // 3. Perform OCR
         // Dynamically import to avoid server startup issues if not needed immediately
         const { createWorker } = await import('tesseract.js');
         const levenshtein = (await import('fast-levenshtein')).default;
@@ -1297,10 +1307,15 @@ export async function verifyIdentity(formData: FormData) {
             // Use local worker path to avoid bundling issues
             worker = await createWorker('eng', 1, {
                 workerPath,
-                logger: m => console.log(m)
+                // logger: m => console.log(m) // Disabled verbose logging
             })
             const ret = await worker.recognize(buffer)
             text = ret.data.text.toLowerCase()
+
+            console.log("OCR Text:", text);
+            console.log("--- DEBUG INFO ---");
+            console.log("User Profile:", JSON.stringify({ name: user.name, rollNumber: user.rollNumber }, null, 2));
+            console.log("------------------");
         } catch (ocrError) {
             console.error("OCR Failed:", ocrError)
             return { message: "Failed to process image. Please try a clearer image.", error: true }
@@ -1308,15 +1323,6 @@ export async function verifyIdentity(formData: FormData) {
             if (worker) {
                 await worker.terminate()
             }
-        }
-
-        // 3. Fetch User Data
-        const user = await prisma.user.findUnique({
-            where: { clerkId: userId }
-        })
-
-        if (!user || !user.name || !user.rollNumber) {
-            return { message: "Profile incomplete. Please complete onboarding first.", error: true }
         }
 
         // 4. Fuzzy Match Logic

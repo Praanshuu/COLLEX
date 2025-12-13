@@ -201,7 +201,6 @@ export function RoommateCard({ profile, onSwipe }: RoommateCardProps) {
                                 {profile.bio.replace(/(\d{10})|(\S+@\S+\.\S+)/g, "********")}
                             </p>
                         </div>
-
                         {profile.preferences && (
                             <div className="space-y-2">
                                 <h3 className="font-semibold text-lg">Preferences</h3>

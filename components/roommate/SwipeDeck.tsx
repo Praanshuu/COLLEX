@@ -32,20 +32,25 @@ export function SwipeDeck() {
     const fetchProfiles = async () => {
         setLoading(true)
         try {
-            const data = await getPotentialRoommates()
-            setProfiles(data as any)
+            const result = await getPotentialRoommates()
+
+            if (result.success && result.data) {
+                setProfiles(result.data as any)
+            } else {
+                if (result.code === "UNVERIFIED") {
+                    toast.error("Please verify your identity to find roommates.", {
+                        action: {
+                            label: "Verify Now",
+                            onClick: () => window.location.href = "/profile"
+                        }
+                    })
+                } else {
+                    toast.error(result.error || "Failed to load profiles")
+                }
+            }
         } catch (error: any) {
             console.error("Failed to fetch profiles", error)
-            if (error.message === "UNVERIFIED" || error.digest?.includes("UNVERIFIED")) {
-                toast.error("Please verify your identity to find roommates.", {
-                    action: {
-                        label: "Verify Now",
-                        onClick: () => window.location.href = "/profile"
-                    }
-                })
-            } else {
-                toast.error("Failed to load profiles")
-            }
+            toast.error("Failed to load profiles")
         } finally {
             setLoading(false)
         }
